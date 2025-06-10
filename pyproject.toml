@@ -18,8 +18,10 @@ dependencies = [
     "sqlalchemy",
     "pydantic",
     "requests",
+    "typer",
 ]
 
 [project.scripts]
-jarvis = "jarvis.cli:main"
+jarvis = "jarvis.cli:app"
 jarvis-api = "jarvis.api.main:app"
+jarvis-run = "jarvis.task_runner:run_pending"

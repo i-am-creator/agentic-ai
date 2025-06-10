@@ -5,3 +5,4 @@ chromadb
 sqlalchemy
 pydantic
 requests
+typer

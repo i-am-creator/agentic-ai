@@ -6,13 +6,20 @@ from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 Base = declarative_base()
 
+
 class Task(Base):
     __tablename__ = "tasks"
     id = Column(String, primary_key=True)
+    prompt = Column(Text)
+    status = Column(String, default="pending")
+
     created_at = Column(DateTime, default=datetime.utcnow)
     chunks = relationship("Chunk", back_populates="task")
     summaries = relationship("Summary", back_populates="task")
 
+
+    
+    
 class Chunk(Base):
     __tablename__ = "chunks"
     id = Column(Integer, primary_key=True, autoincrement=True)

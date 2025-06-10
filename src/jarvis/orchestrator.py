@@ -19,14 +19,15 @@ class MultiContextPlanner:
     def __init__(self) -> None:
         self.context_manager = ContextManager()
         self.model_selector = ModelSelector()
+        self.llm_client = LLMClient()
         self.system_agent = SystemAgent()
         self.file_agent = FileAgent()
         self.code_agent = CodeAgent()
-        self.summarizer_agent = SummarizerAgent()
-        self.llm_client = LLMClient()
+        self.summarizer_agent = SummarizerAgent(self.llm_client)
 
     def create_task(self, user_input: str) -> str:
         task_id = str(uuid.uuid4())[:8]
+        self.context_manager.create_task(task_id, user_input)
         ctx = self.context_manager.get(task_id)
         ctx.history.append(user_input)
         for chunk in chunk_text(user_input):
@@ -35,6 +36,8 @@ class MultiContextPlanner:
 
     def handle(self, task_id: str, user_input: str) -> str:
         ctx = self.context_manager.get(task_id)
+        self.context_manager.update_status(task_id, "in_progress")
+
         ctx.history.append(user_input)
         if not user_input.startswith("!"):
             retrieved = self.context_manager.query_chunks(user_input, limit=3)
@@ -69,4 +72,5 @@ class MultiContextPlanner:
         ctx.history.append(res.content)
         for chunk in chunk_text(res.content):
             self.context_manager.add_chunk(task_id, chunk)
+        self.context_manager.update_status(task_id, "completed")
         return res.content

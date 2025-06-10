@@ -23,10 +23,24 @@ class ContextManager:
         self.vector_store = ChromaVectorStore()
         self.contexts: Dict[str, Context] = {}
 
-    def _ensure_task(self, session, task_id: str) -> None:
+    def _ensure_task(self, session, task_id: str, prompt: str | None = None) -> None:
         if not session.get(Task, task_id):
-            session.add(Task(id=task_id))
+            session.add(Task(id=task_id, prompt=prompt or "", status="pending"))
             session.commit()
+
+    def create_task(self, task_id: str, prompt: str) -> None:
+        session = self.SessionLocal()
+        self._ensure_task(session, task_id, prompt)
+        session.close()
+
+    def update_status(self, task_id: str, status: str) -> None:
+        session = self.SessionLocal()
+        task = session.get(Task, task_id)
+        if task:
+            task.status = status
+            session.commit()
+        session.close()
+
 
     def get(self, task_id: str) -> Context:
         if task_id not in self.contexts:
@@ -63,3 +77,18 @@ class ContextManager:
         session.add(Summary(task_id=task_id, content=content))
         session.commit()
         session.close()
+
+    def list_tasks(self, status: str | None = None) -> list[Task]:
+        session = self.SessionLocal()
+        query = session.query(Task)
+        if status is not None:
+            query = query.filter(Task.status == status)
+        tasks = query.all()
+        session.close()
+        return tasks
+
+    def get_task_record(self, task_id: str) -> Task | None:
+        session = self.SessionLocal()
+        task = session.get(Task, task_id)
+        session.close()
+        return task
