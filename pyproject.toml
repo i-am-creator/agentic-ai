@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvis"
+version = "0.1.0"
+description = "Minimal Jarvis-style multi-agent assistant"
+authors = [{name = "Example"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "boto3",
+    "chromadb",
+    "sqlalchemy",
+    "pydantic",
+    "requests",
+]
+
+[project.scripts]
+jarvis = "jarvis.cli:main"
+jarvis-api = "jarvis.api.main:app"
