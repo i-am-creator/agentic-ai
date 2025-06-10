@@ -106,3 +106,19 @@ class ContextManager:
         tasks = session.execute(query).scalars().all()
         session.close()
         return tasks
+
+    async def get_chunks(self, task_id: str) -> list[Chunk]:
+        """Return all chunk records for a task."""
+        session = self.SessionLocal()
+        records = session.execute(
+            select(Chunk).where(Chunk.task_id == task_id).order_by(Chunk.id)
+        ).scalars().all()
+        session.close()
+        return records
+
+    def get_task_record(self, task_id: str) -> Task | None:
+        """Return the raw task database record."""
+        session = self.SessionLocal()
+        task = session.get(Task, task_id)
+        session.close()
+        return task

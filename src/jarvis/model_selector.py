@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from typing import Optional, Dict, Any
 
-from langchain.chat_models import BedrockChat
-from langchain.schema import HumanMessage, SystemMessage
+"""Simplified model selection without heavy dependencies."""
 
-from .services.sllm_client import SLLMClient
+from textwrap import shorten
+
+# This module purposely avoids heavy LLM libraries. The ``ModelSelector``
+# provides just enough functionality for demos by returning a stubbed
+# response when asked to generate text.
 
 
 class ModelSelector:
@@ -18,24 +21,20 @@ class ModelSelector:
     ) -> None:
         self.model_type = model_type
         self.model_config = model_config or {}
+        # Use a lightweight callable instead of heavy LLM dependencies.
         self.model = self._initialize_model()
-        self.sllm_client = self.model if isinstance(self.model, SLLMClient) else None
+        self.sllm_client = None
 
     def _initialize_model(self) -> Any:
-        """Initialize the selected model."""
-        if self.model_type == "bedrock":
-            return BedrockChat(
-                model_id="anthropic.claude-3-sonnet-20240229-v1:0",
-                region_name="us-east-1",
-                model_kwargs={"temperature": 0.7}
-            )
-        elif self.model_type == "sllm":
-            return SLLMClient(
-                api_key=self.model_config.get("api_key"),
-                base_url=self.model_config.get("base_url", "http://localhost:8000")
-            )
-        else:
-            raise ValueError(f"Unsupported model type: {self.model_type}")
+        """Initialize the selected model.
+
+        The real project would load an LLM here. To keep this lightweight,
+        we simply return a small callable that echoes the prompt.
+        """
+        def simple_model(prompt: str) -> str:
+            return f"Simulated response: {shorten(prompt, width=60, placeholder='...')}"
+
+        return simple_model
 
     def generate_response(
             self,
@@ -44,19 +43,9 @@ class ModelSelector:
             **kwargs: Any
     ) -> str:
         """Generate a response using the selected model."""
-        if self.model_type == "bedrock":
-            messages = []
-            if system_prompt:
-                messages.append(SystemMessage(content=system_prompt))
-            messages.append(HumanMessage(content=prompt))
-            response = self.model.invoke(messages)
-            return response.content
-        elif self.model_type == "sllm":
-            if system_prompt:
-                prompt = f"{system_prompt}\n\n{prompt}"
-            return self.model.generate(prompt, **kwargs)
-        else:
-            raise ValueError(f"Unsupported model type: {self.model_type}")
+        if system_prompt:
+            prompt = f"{system_prompt}\n\n{prompt}"
+        return self.model(prompt)
 
     def analyze_code(
             self,
@@ -65,13 +54,9 @@ class ModelSelector:
             **kwargs: Any
     ) -> Dict[str, Any]:
         """Analyze code using the selected model."""
-        if self.model_type == "sllm":
-            return self.model.code_analysis(code, analysis_type, **kwargs)
-        else:
-            # For other models, use the generate_response method
-            prompt = f"Analyze this code:\n\n{code}\n\nAnalysis type: {analysis_type}"
-            response = self.generate_response(prompt, **kwargs)
-            return {"analysis": response}
+        prompt = f"Analyze this code:\n\n{code}\n\nAnalysis type: {analysis_type}"
+        response = self.generate_response(prompt, **kwargs)
+        return {"analysis": response}
 
     def explain_code(
             self,
@@ -80,9 +65,5 @@ class ModelSelector:
             **kwargs: Any
     ) -> str:
         """Explain code using the selected model."""
-        if self.model_type == "sllm":
-            return self.model.explain_code(code, detail_level, **kwargs)
-        else:
-            # For other models, use the generate_response method
-            prompt = f"Explain this code in {detail_level} detail:\n\n{code}"
-            return self.generate_response(prompt, **kwargs)
+        prompt = f"Explain this code in {detail_level} detail:\n\n{code}"
+        return self.generate_response(prompt, **kwargs)

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import asyncio
+import uuid
 from typing import Dict, Optional, Any
+
 from .context_manager import ContextManager
 from .model_selector import ModelSelector
-from .agents.code_agent import CodeAgent
+from .agents.code import CodeAgent
 from .agents.file import FileAgent
+from .agents.base import TaskRequest
 
 
 class TaskOrchestrator:
@@ -25,15 +29,19 @@ class TaskOrchestrator:
             "file": FileAgent(context_manager, self.model_selector)
         }
 
+    def _run(self, coro):
+        return asyncio.run(coro)
+
     def create_task(self, prompt: str) -> str:
         """Create a new task and return its ID."""
-        task_id = self.context_manager.create_task(prompt)
+        task_id = str(uuid.uuid4())
+        self._run(self.context_manager.create_task(task_id, prompt))
         return task_id
 
     def handle(self, task_id: str, user_input: str) -> str:
         """Handle a task with the appropriate agent."""
         # Get task context
-        task = self.context_manager.get(task_id)
+        task = self._run(self.context_manager.get(task_id))
         if not task:
             return "Error: Task not found"
 
@@ -44,11 +52,12 @@ class TaskOrchestrator:
 
         # Handle the request
         try:
-            response = agent.handle(user_input, task_id)
-            self.context_manager.update_status(task_id, "completed")
-            return response
+            request = TaskRequest(task_id=task_id, content=user_input)
+            response = agent.handle(request)
+            self._run(self.context_manager.update_status(task_id, "completed"))
+            return response.content
         except Exception as e:
-            self.context_manager.update_status(task_id, "failed")
+            self._run(self.context_manager.update_status(task_id, "failed"))
             return f"Error: {str(e)}"
 
     def _select_agent(self, user_input: str) -> Optional[Any]:
@@ -69,7 +78,7 @@ class TaskOrchestrator:
 
     def list_tasks(self) -> str:
         """List all tasks and their status."""
-        tasks = self.context_manager.list_tasks()
+        tasks = self._run(self.context_manager.list_tasks())
         if not tasks:
             return "No tasks found"
 
@@ -84,11 +93,11 @@ class TaskOrchestrator:
 
     def summarize_task(self, task_id: str) -> str:
         """Generate a summary of a task's history."""
-        task = self.context_manager.get(task_id)
+        task = self._run(self.context_manager.get(task_id))
         if not task:
             return "Error: Task not found"
 
-        chunks = self.context_manager.get_chunks(task_id)
+        chunks = self._run(self.context_manager.get_chunks(task_id))
         if not chunks:
             return "No content found for this task"
 
