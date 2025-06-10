@@ -23,11 +23,14 @@ class ContextManager:
         self.vector_store = ChromaVectorStore()
         self.contexts: Dict[str, Context] = {}
 
+    def _ensure_task(self, session, task_id: str, prompt: str | None = None) -> None:
+        if not session.get(Task, task_id):
+            session.add(Task(id=task_id, prompt=prompt or "", status="pending"))
+            session.commit()
+
     def create_task(self, task_id: str, prompt: str) -> None:
         session = self.SessionLocal()
-        if not session.get(Task, task_id):
-            session.add(Task(id=task_id, prompt=prompt, status="pending"))
-            session.commit()
+        self._ensure_task(session, task_id, prompt)
         session.close()
 
     def update_status(self, task_id: str, status: str) -> None:
@@ -45,6 +48,7 @@ class ContextManager:
 
     def add_chunk(self, task_id: str, content: str) -> None:
         session = self.SessionLocal()
+        self._ensure_task(session, task_id)
         session.add(Chunk(task_id=task_id, content=content))
         self.vector_store.add(f"{task_id}-{len(content)}", content)
         session.commit()
@@ -68,6 +72,7 @@ class ContextManager:
 
     def add_summary(self, task_id: str, content: str) -> None:
         session = self.SessionLocal()
+        self._ensure_task(session, task_id)
         session.add(Summary(task_id=task_id, content=content))
         session.commit()
         session.close()

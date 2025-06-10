@@ -7,7 +7,7 @@ from ..services.llm_client import LLMClient
 
 
 class SummarizerAgent(Agent):
-    """Summarize a block of text using an LLM."""
+    """Summarize a block of text using an LLM with a fallback."""
 
     def __init__(self, llm_client: Optional[LLMClient] = None) -> None:
         self.llm = llm_client or LLMClient()

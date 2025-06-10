@@ -10,33 +10,42 @@ app = FastAPI(title="Jarvis API")
 planner = MultiContextPlanner()
 selector = ModelSelector()
 
+
 class CreateTaskRequest(BaseModel):
     prompt: str
+
 
 class CreateTaskResponse(BaseModel):
     task_id: str
 
+
 class TaskInput(BaseModel):
     content: str
 
+
 class TaskOutput(BaseModel):
     content: str
+
 
 class TaskInfo(BaseModel):
     id: str
     prompt: str
     status: str
 
+
 class ModelSelectionRequest(BaseModel):
     prompt: str
 
+
 class ModelSelectionResponse(BaseModel):
     model: str
+
 
 @app.post("/select-model", response_model=ModelSelectionResponse)
 def select_model(req: ModelSelectionRequest):
     model = selector.select(req.prompt)
     return ModelSelectionResponse(model=model)
+
 
 @app.post("/tasks/create", response_model=CreateTaskResponse)
 def create_task(req: CreateTaskRequest):
@@ -56,6 +65,7 @@ def get_task(task_id: str):
     if t is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return TaskInfo(id=t.id, prompt=t.prompt, status=t.status)
+
 
 @app.post("/tasks/{task_id}", response_model=TaskOutput)
 def handle_task(task_id: str, input: TaskInput):
