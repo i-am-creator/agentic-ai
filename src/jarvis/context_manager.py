@@ -1,39 +1,43 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Iterable
+from typing import List, Optional
+from datetime import datetime
+
+from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 from .db import Base, Task, Chunk, Summary, get_engine, get_sessionmaker
-from .vector_store import ChromaVectorStore
 
 
-@dataclass
-class Context:
+class Context(SQLModel):
+    """In-memory context for a task."""
     task_id: str
-    history: List[str] = field(default_factory=list)
+    history: List[str] = Field(default_factory=list)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class ContextManager:
-    """Stores context for multiple tasks in SQLite and Chroma."""
+    """Simplified context manager using only SQLite."""
 
     def __init__(self, db_url: str = "sqlite:///jarvis.db") -> None:
+        # Initialize SQLModel
         self.engine = get_engine(db_url)
         Base.metadata.create_all(self.engine)
         self.SessionLocal = get_sessionmaker(self.engine)
-        self.vector_store = ChromaVectorStore()
-        self.contexts: Dict[str, Context] = {}
 
-    def _ensure_task(self, session, task_id: str, prompt: str | None = None) -> None:
+    def _ensure_task(self, session: Session, task_id: str, prompt: str | None = None) -> None:
         if not session.get(Task, task_id):
             session.add(Task(id=task_id, prompt=prompt or "", status="pending"))
             session.commit()
 
-    def create_task(self, task_id: str, prompt: str) -> None:
+    async def create_task(self, task_id: str, prompt: str) -> None:
+        """Create a new task."""
         session = self.SessionLocal()
         self._ensure_task(session, task_id, prompt)
         session.close()
 
-    def update_status(self, task_id: str, status: str) -> None:
+    async def update_status(self, task_id: str, status: str) -> None:
+        """Update task status."""
         session = self.SessionLocal()
         task = session.get(Task, task_id)
         if task:
@@ -41,54 +45,64 @@ class ContextManager:
             session.commit()
         session.close()
 
+    async def get(self, task_id: str) -> Context:
+        """Get task context."""
+        session = self.SessionLocal()
+        task = session.get(Task, task_id)
+        if not task:
+            session.close()
+            raise ValueError(f"Task with ID {task_id} not found")
+        
+        # Load history from chunks
+        chunks = session.execute(
+            select(Chunk)
+            .where(Chunk.task_id == task_id)
+            .order_by(Chunk.id)
+        ).scalars().all()
+        
+        context = Context(
+            task_id=task_id,
+            history=[c.content for c in chunks]
+        )
+        session.close()
+        return context
 
-    def get(self, task_id: str) -> Context:
-        if task_id not in self.contexts:
-            self.contexts[task_id] = Context(task_id)
-        return self.contexts[task_id]
-
-    def add_chunk(self, task_id: str, content: str) -> None:
+    async def add_chunk(self, task_id: str, content: str) -> None:
+        """Add a chunk of content to the task."""
         session = self.SessionLocal()
         self._ensure_task(session, task_id)
+        
+        # Add to database
         session.add(Chunk(task_id=task_id, content=content))
-        self.vector_store.add(f"{task_id}-{len(content)}", content)
         session.commit()
         session.close()
 
-    def get_chunks(self, task_id: str, limit: int = 5) -> Iterable[str]:
+    async def get_task_history(self, task_id: str) -> List[str]:
+        """Get task history."""
         session = self.SessionLocal()
-        chunks = (
-            session.query(Chunk)
-            .filter(Chunk.task_id == task_id)
-            .order_by(Chunk.id.desc())
-            .limit(limit)
-            .all()
-        )
-        texts = [c.content for c in chunks]
+        chunks = session.execute(
+            select(Chunk)
+            .where(Chunk.task_id == task_id)
+            .order_by(Chunk.id)
+        ).scalars().all()
+        history = [c.content for c in chunks]
         session.close()
-        return texts
+        return history
 
-    def query_chunks(self, text: str, limit: int = 5) -> Iterable[str]:
-        return self.vector_store.query(text, limit)
-
-    def add_summary(self, task_id: str, content: str) -> None:
+    async def add_summary(self, task_id: str, content: str) -> None:
+        """Add a summary to the task."""
         session = self.SessionLocal()
         self._ensure_task(session, task_id)
         session.add(Summary(task_id=task_id, content=content))
         session.commit()
         session.close()
 
-    def list_tasks(self, status: str | None = None) -> list[Task]:
+    async def list_tasks(self, status: str | None = None) -> list[Task]:
+        """List all tasks."""
         session = self.SessionLocal()
-        query = session.query(Task)
+        query = select(Task)
         if status is not None:
-            query = query.filter(Task.status == status)
-        tasks = query.all()
+            query = query.where(Task.status == status)
+        tasks = session.execute(query).scalars().all()
         session.close()
         return tasks
-
-    def get_task_record(self, task_id: str) -> Task | None:
-        session = self.SessionLocal()
-        task = session.get(Task, task_id)
-        session.close()
-        return task

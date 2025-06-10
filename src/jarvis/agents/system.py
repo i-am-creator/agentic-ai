@@ -8,6 +8,9 @@ class SystemAgent(Agent):
     """Agent for executing shell commands in a sandboxed way."""
 
     def handle(self, request: TaskRequest) -> TaskResponse:
+        # TODO: Replace subprocess.run with a more secure method for executing shell commands.
+        # This could involve using a dedicated command execution service, a safer subprocess
+        # library, or carefully sanitizing inputs.
         try:
             print("SYSTEM CMD:", request.content)
             result = subprocess.run(

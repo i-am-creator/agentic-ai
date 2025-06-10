@@ -17,6 +17,9 @@ class TaskResponse:
 
 class Agent(ABC):
     """Base interface for all agents."""
+    def __init__(self, *args, **kwargs):
+        """Initialize the agent with any necessary parameters."""
+        pass
 
     @abstractmethod
     def handle(self, request: TaskRequest) -> TaskResponse:

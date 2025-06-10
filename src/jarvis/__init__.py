@@ -1,5 +1,5 @@
 """Minimal Jarvis-style multi-agent system."""
 
-from .orchestrator import MultiContextPlanner
+from .orchestrator import TaskOrchestrator
 
-__all__ = ["MultiContextPlanner"]
+__all__ = ["TaskOrchestrator"]

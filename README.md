@@ -1,73 +1,184 @@
-# Agentic AI
+# Jarvis AI Assistant
 
-This repository contains a minimal proof-of-concept implementation of a
-"Jarvis"-style multi-agent assistant. The design is inspired by the
-planning document provided in the prompt and focuses on a simple command
-line interface that coordinates different agents.
+A multi-context AI assistant powered by LLMs, built with FastAPI, LangChain, and CrewAI.
 
-An experimental FastAPI server exposes the same functionality over HTTP.
+## 🚀 Features
 
-## Features
+- **Multi-Context Management**: Handle multiple tasks with persistent storage
+- **Smart Agent Orchestration**: Uses AutoGen and CrewAI for complex task handling
+- **Multiple LLM Support**: Local (Ollama) and Cloud (Bedrock) model integration
+- **Vector Storage**: ChromaDB for semantic search and context retrieval
+- **Caching**: Redis for fast context access
+- **CLI Interface**: Rich command-line interface with task management
 
-* **MultiContextPlanner** orchestrates tasks and keeps history per task in
-  SQLite.
-* **ModelSelector** chooses between three model classes: `local`, `medium`
-  and `heavy` (heuristic based).
-* **Vector store** persists chunks to Chroma and allows retrieval of top-k
-  relevant snippets.
-* **Agents**
-  * `SystemAgent` runs shell commands.
-  * `FileAgent` performs basic file reads and writes.
-  * `CodeAgent` does a trivial text substitution to simulate refactoring.
-  * `SummarizerAgent` calls an LLM to condense task history.
+## 📋 Prerequisites
 
-## Usage
+- Python 3.9+
+- Docker and Docker Compose (for Redis and ChromaDB)
+- AWS Account (for Bedrock access)
+- Ollama (for local LLM support)
 
-Create a virtual environment with Python 3.10+ and install the project in
-editable mode:
+## 🛠️ Setup
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd jarvis-ai
+   ```
+
+2. **Create and activate virtual environment**
+   ```bash
+   python -m venv venv
+   # On Windows
+   .\venv\Scripts\activate
+   # On Unix/MacOS
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Start required services**
+   ```bash
+   docker-compose up -d
+   ```
+
+5. **Configure environment variables**
+   Create a `.env` file:
+   ```env
+   AWS_ACCESS_KEY_ID=your_access_key
+   AWS_SECRET_ACCESS_KEY=your_secret_key
+   AWS_REGION=your_region
+   ```
+
+## 🔄 Application Flow
+
+### 1. Task Creation
+- User submits a command or query
+- System creates a new task with unique ID
+- Initial context is stored in SQLite and vectorized in ChromaDB
+
+### 2. Task Processing
+The system follows this flow for each task:
+
+```mermaid
+graph TD
+    A[User Input] --> B{Command Type?}
+    B -->|Special Command| C[Direct Agent]
+    B -->|Complex Task| D[CrewAI Orchestration]
+    B -->|Simple Task| E[Direct LLM]
+    C --> F[Update Context]
+    D --> F
+    E --> F
+    F --> G[Return Response]
 ```
 
-Run the Typer-based CLI with a command. Prefixes select agents:
+### 3. Agent Types
+- **Direct Agents**: Handle specific commands
+  - `!sh`: System commands
+  - `!file`: File operations
+  - `!code`: Code-related tasks
+  - `!summarize`: Text summarization
 
-```bash
-jarvis !sh ls
-jarvis !file read README.md
-jarvis !code path/to/file.py replacement
-jarvis !summarize
+- **CrewAI Agents**: Handle complex tasks
+  - Planner: Breaks down tasks
+  - Executor: Implements solutions
+  - Reviewer: Validates results
+
+### 4. Context Management
+- SQLite: Stores task metadata and history
+- Redis: Caches active contexts
+- ChromaDB: Stores vector embeddings for semantic search
+
+## 💻 Usage
+
+### Basic Commands
+
+1. **Start a new task**
+   ```bash
+   python -m src.jarvis.cli "Your command here"
+   ```
+
+2. **Continue an existing task**
+   ```bash
+   python -m src.jarvis.cli --task <task_id> "Your next command"
+   ```
+
+3. **List all tasks**
+   ```bash
+   python -m src.jarvis.cli list-tasks
+   ```
+
+4. **Summarize a task**
+   ```bash
+   python -m src.jarvis.cli summarize <task_id>
+   ```
+
+### Example Use Cases
+
+1. **Simple Query**
+   ```bash
+   python -m src.jarvis.cli "What is the weather like today?"
+   ```
+
+2. **File Operation**
+   ```bash
+   python -m src.jarvis.cli "!file read example.txt"
+   ```
+
+3. **Code Analysis**
+   ```bash
+   python -m src.jarvis.cli "!code analyze src/main.py"
+   ```
+
+4. **Complex Task**
+   ```bash
+   python -m src.jarvis.cli "Analyze the codebase and suggest improvements for error handling"
+   ```
+
+## 📁 Project Structure
+
+```
+jarvis-ai/
+├── src/
+│   └── jarvis/
+│       ├── agents/         # Agent implementations
+│       ├── api/           # FastAPI endpoints
+│       ├── services/      # External service integrations
+│       └── utils/         # Utility functions
+├── tests/                 # Test files
+├── docker-compose.yml     # Service definitions
+├── requirements.txt       # Python dependencies
+└── README.md             # This file
 ```
 
-Anything that does not start with `!sh`, `!file`, `!code` or `!summarize`
-will be sent to an LLM. The `ModelSelector` decides whether to use a local
-Ollama model or AWS Bedrock.
+## 🔍 Debugging
 
-The same features are available over HTTP:
+1. **Check service status**
+   ```bash
+   docker-compose ps
+   ```
 
-```bash
-uvicorn jarvis.api.main:app --reload
-```
+2. **View logs**
+   ```bash
+   docker-compose logs -f
+   ```
 
-The API exposes routes to create and manage tasks:
+3. **Test database connection**
+   ```bash
+   python -c "from src.jarvis.db import get_engine; print(get_engine())"
+   ```
 
-```
-POST /tasks/create        -> returns a task_id
-GET  /tasks               -> list all tasks (optionally filter by status)
-GET  /tasks/{id}          -> retrieve a single task record
-POST /tasks/{id}          -> process input for an existing task
-POST /tasks/{id}/update   -> alias of the above for clarity
-```
+## 🤝 Contributing
 
-The `/tasks/{id}/update` endpoint returns a short summary when you call `!summarize`.
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-### Task queue
+## 📝 License
 
-All created tasks are stored with a status flag. Pending tasks can be processed
-one by one using the task runner:
-
-```bash
-python -m jarvis.task_runner
-```
+This project is licensed under the MIT License - see the LICENSE file for details.

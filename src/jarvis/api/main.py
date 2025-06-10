@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Optional
 
 from ..orchestrator import MultiContextPlanner
 from ..model_selector import ModelSelector
@@ -9,6 +10,12 @@ from ..model_selector import ModelSelector
 app = FastAPI(title="Jarvis API")
 planner = MultiContextPlanner()
 selector = ModelSelector()
+
+class Task(BaseModel):
+    """Represents a task to be executed by the system."""
+    description: str
+    expected_output: str = Field(default="Analysis and recommendations")  # Added default
+    context: Optional[dict] = None
 
 
 class CreateTaskRequest(BaseModel):
