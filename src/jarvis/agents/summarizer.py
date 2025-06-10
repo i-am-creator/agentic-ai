@@ -20,4 +20,3 @@ class SummarizerAgent(Agent):
             summary = self.llm.generate("medium", prompt)
         except Exception:
             summary = request.content[:200]
-        return TaskResponse(content=summary)

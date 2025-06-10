@@ -41,6 +41,7 @@ class ContextManager:
             session.commit()
         session.close()
 
+
     def get(self, task_id: str) -> Context:
         if task_id not in self.contexts:
             self.contexts[task_id] = Context(task_id)

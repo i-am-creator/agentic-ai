@@ -47,7 +47,8 @@ def select_model(req: ModelSelectionRequest):
     return ModelSelectionResponse(model=model)
 
 
-@app.post("/tasks/create", response_model=CreateTaskResponse)
+
+  @app.post("/tasks/create", response_model=CreateTaskResponse)
 def create_task(req: CreateTaskRequest):
     task_id = planner.create_task(req.prompt)
     return CreateTaskResponse(task_id=task_id)

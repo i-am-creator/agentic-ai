@@ -12,11 +12,14 @@ class Task(Base):
     id = Column(String, primary_key=True)
     prompt = Column(Text)
     status = Column(String, default="pending")
+
     created_at = Column(DateTime, default=datetime.utcnow)
     chunks = relationship("Chunk", back_populates="task")
     summaries = relationship("Summary", back_populates="task")
 
 
+    
+    
 class Chunk(Base):
     __tablename__ = "chunks"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -24,7 +27,6 @@ class Chunk(Base):
     content = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     task = relationship("Task", back_populates="chunks")
-
 
 class Summary(Base):
     __tablename__ = "summaries"

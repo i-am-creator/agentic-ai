@@ -37,6 +37,7 @@ class MultiContextPlanner:
     def handle(self, task_id: str, user_input: str) -> str:
         ctx = self.context_manager.get(task_id)
         self.context_manager.update_status(task_id, "in_progress")
+
         ctx.history.append(user_input)
         if not user_input.startswith("!"):
             retrieved = self.context_manager.query_chunks(user_input, limit=3)
