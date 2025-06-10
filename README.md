@@ -19,7 +19,7 @@ An experimental FastAPI server exposes the same functionality over HTTP.
   * `SystemAgent` runs shell commands.
   * `FileAgent` performs basic file reads and writes.
   * `CodeAgent` does a trivial text substitution to simulate refactoring.
-  * `SummarizerAgent` truncates logs to 200 characters.
+  * `SummarizerAgent` calls an LLM to condense task history.
 
 ## Usage
 
@@ -51,7 +51,17 @@ The same features are available over HTTP:
 uvicorn jarvis.api.main:app --reload
 ```
 
-Use `/tasks/create` and `/tasks/{id}` endpoints to drive the assistant.
+The API exposes routes to create and manage tasks:
+
+```
+POST /tasks/create        -> returns a task_id
+GET  /tasks               -> list all tasks (optionally filter by status)
+GET  /tasks/{id}          -> retrieve a single task record
+POST /tasks/{id}          -> process input for an existing task
+POST /tasks/{id}/update   -> alias of the above for clarity
+```
+
+The `/tasks/{id}/update` endpoint returns a short summary when you call `!summarize`.
 
 ### Task queue
 

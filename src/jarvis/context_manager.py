@@ -80,3 +80,9 @@ class ContextManager:
         tasks = query.all()
         session.close()
         return tasks
+
+    def get_task_record(self, task_id: str) -> Task | None:
+        session = self.SessionLocal()
+        task = session.get(Task, task_id)
+        session.close()
+        return task

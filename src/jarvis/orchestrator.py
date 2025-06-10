@@ -19,11 +19,11 @@ class MultiContextPlanner:
     def __init__(self) -> None:
         self.context_manager = ContextManager()
         self.model_selector = ModelSelector()
+        self.llm_client = LLMClient()
         self.system_agent = SystemAgent()
         self.file_agent = FileAgent()
         self.code_agent = CodeAgent()
-        self.summarizer_agent = SummarizerAgent()
-        self.llm_client = LLMClient()
+        self.summarizer_agent = SummarizerAgent(self.llm_client)
 
     def create_task(self, user_input: str) -> str:
         task_id = str(uuid.uuid4())[:8]
