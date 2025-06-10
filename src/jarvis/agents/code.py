@@ -7,7 +7,13 @@ from .base import Agent, TaskRequest, TaskResponse
 
 
 class CodeAgent(Agent):
-    """Agent that performs code analysis and refactoring."""
+    """Agent that performs code analysis, explanation and refactoring."""
+
+    def __init__(self, context_manager, model_selector, *args, **kwargs) -> None:
+        """Create the agent with a context manager and model selector."""
+        super().__init__(*args, **kwargs)
+        self.context_manager = context_manager
+        self.model_selector = model_selector
 
     def handle(self, request: TaskRequest) -> TaskResponse:
         parts = request.content.split(maxsplit=1)
@@ -21,8 +27,10 @@ class CodeAgent(Agent):
             return self._analyze_code(argument)
         elif command == "refactor" and argument:
             return self._refactor_code(argument)
+        elif command == "explain" and argument:
+            return self._explain_code(argument)
         else:
-            return TaskResponse(content="Unknown code command. Supported commands: analyze, refactor")
+            return TaskResponse(content="Unknown code command. Supported commands: analyze, refactor, explain")
 
     def _analyze_code(self, file_path: str) -> TaskResponse:
         """Analyze code in a file and provide insights."""
@@ -64,3 +72,21 @@ class CodeAgent(Agent):
             return TaskResponse(content=f"Refactored {file_path}")
         except Exception as e:
             return TaskResponse(content=f"Error refactoring code: {str(e)}")
+
+    def _explain_code(self, file_path: str) -> TaskResponse:
+        """Generate an explanation for the given source file."""
+        path = Path(file_path)
+        if not path.exists():
+            return TaskResponse(content=f"File {file_path} not found")
+
+        try:
+            code = path.read_text()
+        except Exception as e:  # pragma: no cover - file errors
+            return TaskResponse(content=f"Error reading file: {str(e)}")
+
+        try:
+            explanation = self.model_selector.explain_code(code)
+        except Exception as e:  # pragma: no cover - llm failures
+            return TaskResponse(content=f"LLM error: {str(e)}")
+
+        return TaskResponse(content=explanation)

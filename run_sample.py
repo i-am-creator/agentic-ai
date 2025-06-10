@@ -1,19 +1,14 @@
-import asyncio
-from src.jarvis.orchestrator import MultiContextPlanner
+from src.jarvis.context_manager import ContextManager
+from src.jarvis.workflow_manager import WorkflowManager
 
-async def main():
-    planner = MultiContextPlanner()
-    # Example use case: Ask Jarvis to summarize a text
-    user_input = "Summarize the main points of the following text: Artificial intelligence is transforming industries by automating tasks, providing insights, and enabling new capabilities."
-    print(f"User input: {user_input}")
 
-    # Create a new task
-    task_id = await planner.create_task(user_input)
-    print(f"Created task with ID: {task_id}")
+def main() -> None:
+    cm = ContextManager()
+    wf = WorkflowManager(cm)
+    command = "explain ./src/jarvis/model_selector.py"
+    output = wf.execute_workflow(command)
+    print(output)
 
-    # Handle the task (get the response)
-    result = await planner.handle(task_id, user_input)
-    print(f"\nJarvis response:\n{result}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 import sys
+import asyncio
 
 import click
 from rich.console import Console
@@ -40,7 +41,7 @@ def run_command(command: str, task_id: Optional[str], workflow_manager: Workflow
     try:
         # Handle special commands
         if command == "list":
-            tasks = workflow_manager.context_manager.list_tasks()
+            tasks = asyncio.run(workflow_manager.context_manager.list_tasks())
             if not tasks:
                 console.print("No tasks found")
                 return
@@ -54,12 +55,12 @@ def run_command(command: str, task_id: Optional[str], workflow_manager: Workflow
 
         if command.startswith("summarize "):
             task_id = command.split()[1]
-            task = workflow_manager.context_manager.get(task_id)
+            task = asyncio.run(workflow_manager.context_manager.get(task_id))
             if not task:
                 console.print("Error: Task not found")
                 return
 
-            chunks = workflow_manager.context_manager.get_chunks(task_id)
+            chunks = asyncio.run(workflow_manager.context_manager.get_chunks(task_id))
             if not chunks:
                 console.print("No content found for this task")
                 return
@@ -99,7 +100,7 @@ def run_interactive(workflow_manager: WorkflowManager) -> None:
                 break
 
             if command == "list":
-                tasks = workflow_manager.context_manager.list_tasks()
+                tasks = asyncio.run(workflow_manager.context_manager.list_tasks())
                 if not tasks:
                     console.print("No tasks found")
                     continue
@@ -113,12 +114,12 @@ def run_interactive(workflow_manager: WorkflowManager) -> None:
 
             if command.startswith("summarize "):
                 task_id = command.split()[1]
-                task = workflow_manager.context_manager.get(task_id)
+                task = asyncio.run(workflow_manager.context_manager.get(task_id))
                 if not task:
                     console.print("Error: Task not found")
                     continue
 
-                chunks = workflow_manager.context_manager.get_chunks(task_id)
+                chunks = asyncio.run(workflow_manager.context_manager.get_chunks(task_id))
                 if not chunks:
                     console.print("No content found for this task")
                     continue
